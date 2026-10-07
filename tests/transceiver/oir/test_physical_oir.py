@@ -32,6 +32,9 @@ from tests.transceiver.oir import oir_helpers
 
 logger = logging.getLogger(__name__)
 
+# Every test needs an implemented oir_method and re-seats any module it left out of its cage.
+pytestmark = pytest.mark.usefixtures("_skip_unimplemented_oir_method", "_restore_transceivers")
+
 
 def _parents_of(lports, lport_to_first_subport_mapping):
     """Return the first sub-ports of the modules ``lports`` belong to."""

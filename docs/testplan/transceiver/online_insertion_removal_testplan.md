@@ -44,6 +44,8 @@ Please refer to the [Testbed Topology](./test_plan.md#testbed-topology) section.
 
 4. `port_startup_wait_sec` attribute of the [transceiver system testplan](./system_test_plan.md#attributes) is to be used to get the wait time before checking the interface operational status after the optics insertion or remote reseat.
 
+5. The remote reseat tests also use the following [transceiver system testplan](./system_test_plan.md#attributes) attributes: `transceiver_reset_supported` (must be true for every module under test), `low_power_mode_supported` (steps 4 and 5 of the remote reseat run only on modules supporting it), `transceiver_reset_i2c_recover_sec` (replaces the 5s sleep after the reset when longer), `verify_lldp_on_link_up` and `lldp_neighbor_wait_sec` (LLDP checks), and `optics_si_settings` and `media_si_settings` (SI settings checks, run only where defined).
+
 #### 1.1 Online Insertion and Removal Testing
 
 This section outlines the test cases for validating the insertion and removal of optics in SONiC. The state transitions and services' health are to be tested as a result of optics insertion and removal. The tests cover both physical OIR and remote reseat scenarios, ensuring that the system behaves correctly when optics are inserted or removed.

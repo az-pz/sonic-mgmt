@@ -1,7 +1,9 @@
-"""Physical OIR operations and verification primitives.
+"""Physical OIR operations and OIR verification primitives.
 
 Backs the Physical OIR test cases in
-``docs/testplan/transceiver/online_insertion_removal_testplan.md``.
+``docs/testplan/transceiver/online_insertion_removal_testplan.md``; the
+verification primitives are shared with the Remote reseat test cases, which
+pass their own attribute category where a per-transceiver setting is read.
 
 Operations are operator driven (``oir_method`` ``manual``): each one prints a
 prompt on the terminal, blocks until the operator confirms, then waits for the
@@ -277,7 +279,8 @@ def verify_state_tables_removed(duthost, lports, wait_sec, status_sw=STATUS_SW_R
     return poll_ports_recovered(_check, wait_sec, POLL_INTERVAL_SEC, "STATE_DB removal")
 
 
-def verify_state_tables_present(duthost, lports, parents, wait_sec, baseline_tables=None, ready=True):
+def verify_state_tables_present(duthost, lports, parents, wait_sec, baseline_tables=None, ready=True,
+                                event="insertion"):
     """The per-module tables are republished and ``TRANSCEIVER_STATUS_SW`` shows the
     module inserted and, if ``ready``, READY.
 
@@ -285,6 +288,7 @@ def verify_state_tables_present(duthost, lports, parents, wait_sec, baseline_tab
     per-module tables are published under.  ``baseline_tables`` is the
     pre-removal snapshot from :func:`capture_state_tables`; every table a port
     published before the removal (flag, VDM and PM tables included) must return.
+    ``event`` names the operation the tables must be back after.
     """
     baseline_tables = baseline_tables or {}
 
@@ -297,7 +301,7 @@ def verify_state_tables_present(duthost, lports, parents, wait_sec, baseline_tab
             missing = natsorted(expected - tables_by_port.get(port, set()))
             if missing:
                 failures.append(
-                    f"{port}: STATE_DB table(s) not republished after insertion: {', '.join(missing)}"
+                    f"{port}: STATE_DB table(s) not republished after {event}: {', '.join(missing)}"
                 )
             failures += _check_status_sw(duthost, port, STATUS_SW_READY if ready else STATUS_SW_INSERTED)
         return failures
@@ -439,11 +443,13 @@ def verify_flap_count_increment(duthost, lports, baseline, expected_increment=1)
 
 
 def verify_no_link_flap(duthost, port_attributes_dict, lports,
-                        sentinels=None, observation_start=None):
-    """Verify each port stays stable for its configured observation window."""
+                        sentinels=None, observation_start=None,
+                        attribute_key=PHYSICAL_OIR_ATTRIBUTES_KEY):
+    """Verify each port stays stable for the ``link_flap_monitor_timeout_sec``
+    window of its ``attribute_key`` category."""
     lports_by_timeout = defaultdict(list)
     for port in lports:
-        attrs = port_attributes_dict[port][PHYSICAL_OIR_ATTRIBUTES_KEY]
+        attrs = port_attributes_dict[port][attribute_key]
         lports_by_timeout[attrs["link_flap_monitor_timeout_sec"]].append(port)
 
     if sentinels is None:
@@ -479,28 +485,31 @@ def verify_other_ports_up(duthost, port_attributes_dict, affected_lports, link_p
     ]
 
 
-def verify_other_ports_no_flap(duthost, baseline):
+def verify_other_ports_no_flap(duthost, baseline, cause="another port's transceiver was inserted/removed"):
     """Verify no port in ``baseline`` flapped since it was captured.
 
     ``baseline`` is :func:`get_other_ports_flap_counts`.  Those ports keep their
     module seated and their link peer untouched throughout, so any
     ``flap_count`` change (a single down or up transition included) means
-    another port's OIR disturbed their link.
+    another port's OIR disturbed their link.  ``cause`` names that operation
+    in the failure strings.
     """
     return [
-        f"{failure} while another port's transceiver was inserted/removed"
+        f"{failure} while {cause}"
         for failure in verify_flap_count_increment(duthost, list(baseline), baseline, expected_increment=0)
     ]
 
 
-def capture_kernel_error_watermark(duthost, port_attributes_dict, lports):
-    """Return ``(watermark, err)`` when any affected port enables monitoring, else ``None``.
+def capture_kernel_error_watermark(duthost, port_attributes_dict, lports,
+                                   attribute_key=PHYSICAL_OIR_ATTRIBUTES_KEY):
+    """Return ``(watermark, err)`` when any affected port enables ``monitor_kernel_errors``
+    in its ``attribute_key`` category, else ``None``.
 
     The capture error is preserved rather than collapsed into ``None`` so a
     requested kernel check cannot silently pass without ever running.
     """
     if not any(
-        port_attributes_dict[port][PHYSICAL_OIR_ATTRIBUTES_KEY]["monitor_kernel_errors"]
+        port_attributes_dict[port][attribute_key]["monitor_kernel_errors"]
         for port in lports
     ):
         return None

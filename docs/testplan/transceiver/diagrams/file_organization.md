@@ -127,6 +127,8 @@ tests/transceiver/
 │   │                                        #   link-up check — called by conftest.py session fixtures
 │   │                                        #   AND by the owning test category's reportable test cases
 │   ├── verification.py                      # Standard Port Recovery and Verification Procedure
+│   ├── si_settings.py                       # Standard Port Recovery SI building blocks: optics SI (CMIS Active
+│   │                                        #   Control Set) and media SI (APPL_DB PORT_TABLE) verification
 │   ├── state_management.py                  # State Preservation and Restoration helpers
 │   ├── scenario_ops.py                      # perform_<op> operation helpers (cold/warm/fast reboot, config_reload,
 │   │                                        #   daemon_restart, sfputil_reset, lpm_toggle) wrapping the existing
@@ -219,6 +221,18 @@ tests/transceiver/
 │       ├── test_reboot_stress.py            # TC 3-5: Reboot stress tests
 │       ├── test_link_stability.py           # TC 6: Link stability monitoring
 │       └── test_power_cycle_stress.py       # TC 7: Power cycle stress test
+│
+├── oir/
+│   ├── __init__.py
+│   ├── conftest.py                          # OIR fixtures; autouse fixture requests presence_verified and
+│   │                                        #   links_verified from top-level conftest.py. Physical OIR and
+│   │                                        #   remote reseat fixtures (ports under test, link peers, teardown
+│   │                                        #   restoration) are opted into by their test module.
+│   ├── oir_helpers.py                       # Physical OIR operations and shared OIR verification primitives
+│   ├── remote_reseat_helpers.py             # Remote reseat seven-step operation and its verifiers (table
+│   │                                        #   updates, LLDP neighbor identity, link peers)
+│   ├── test_physical_oir.py                 # Physical OIR TC 1-6
+│   └── test_remote_reseat.py                # Remote reseat TC 1-2 (also requests gold_fw_verified)
 │
 ├── cdb_firmware_upgrade/
 │   ├── __init__.py
